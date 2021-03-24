@@ -1,6 +1,9 @@
 from datetime import datetime
 import logging
 import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 from flask import Flask, redirect, render_template, request
 
@@ -27,6 +30,21 @@ def homepage():
     # # Return a Jinja2 HTML template and pass in text_entities as a parameter.
     return render_template("homepage.html", text_entities=text_entities)
 
+
+@app.route("/visulization")
+def visulizationpage():
+    # Create a Cloud Datastore client.
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+
+    weather = pd.read_csv('SampleData_Weather.csv')
+    print(weather)
+
+    weather.plot(kind='line', y='Tmax', x='Month')
+    plt.show()
+
+    # # Return a Jinja2 HTML template and pass in text_entities as a parameter.
+    return render_template("visulization.html")
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_text():

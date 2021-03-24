@@ -4,5 +4,5 @@ gunicorn==19.10.0; python_version < '3.0'
 google-cloud-datastore==2.1.0
 google-cloud-language==2.0.0
 numpy==1.14.5
-pandas==0.22.0
-matplotlib==3.3.4
+pandas==1.2.3
+metaplot==1.1.0
