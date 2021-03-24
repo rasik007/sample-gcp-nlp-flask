@@ -44,7 +44,7 @@ def visulizationpage():
     plt.show()
 
     # # Return a Jinja2 HTML template and pass in text_entities as a parameter.
-    return render_template("visulization.html", text_entities=text_entities)
+    return render_template("visulization.html")
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_text():
