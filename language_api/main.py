@@ -87,9 +87,14 @@ def server_error(e):
         ),
         500,
     )
+
+@app.route("/sentiment/<string:text>", methods=["GET", "POST"])
 def analyze_text_sentiment(text):
+    if request.method == "POST":
+        text = str(request.form)
+
     client = language.LanguageServiceClient()
-    document = language.Document(content=text, type_=language.Document.Type.PLAIN_TEXT)
+    document = language.Document(content=str(text), type_=language.Document.Type.PLAIN_TEXT)
 
     response = client.analyze_sentiment(document=document)
 
@@ -111,9 +116,10 @@ def analyze_text_sentiment(text):
         item["sentiment magnitude"]=sentence.sentiment.magnitude
         sentence_sentiment.append(item)
 
-    return sentence_sentiment
+    return str(sentence_sentiment)
 
 # Entity Analysis
+@app.route("/entity/<string:text>", methods=["GET", "POST"])
 def gcp_analyze_entities(text, debug=0):
     """
     Analyzing Entities in a String
@@ -121,6 +127,8 @@ def gcp_analyze_entities(text, debug=0):
     Args:
       text_content The text content to analyze
     """
+    if request.method == "POST":
+        text = str(request.form)
 
     client = language.LanguageServiceClient()
     document = language.Document(content=text, type_=language.Document.Type.PLAIN_TEXT)
@@ -169,7 +177,107 @@ def gcp_analyze_entities(text, debug=0):
     if debug:
         print(u"Language of the text: {}".format(response.language))
 
-    return(output)
+    return str(output)
+
+
+# Content Classification
+@app.route("/classify/<string:text>", methods=["GET", "POST"])
+def gcp_classify_text(text):
+    if request.method == "POST":
+        text = str(request.form)
+
+    client = language.LanguageServiceClient()
+    document = language.Document(content=text, type_=language.Document.Type.PLAIN_TEXT)
+
+    response = client.classify_text(document=document)
+
+    output = []
+    for category in response.categories:
+        category_output = "category=" + category.name + ", confidence="+str(category.confidence)
+        output.append(category_output)
+
+    return str(output)
+
+# Syntax Analysis
+@app.route("/syntax/<string:text>", methods=["GET", "POST"])
+def gcp_analyze_syntax(text, debug=0):
+    """
+    Analyzing Syntax in a String
+
+    Args:
+      text The text content to analyze
+    """
+    if request.method == "POST":
+        text = str(request.form)
+
+    client = language.LanguageServiceClient()
+    document = language.Document(content=text, type_=language.Document.Type.PLAIN_TEXT)
+    response = client.analyze_syntax(document=document)
+
+    output = []
+    # Loop through tokens returned from the API
+    for token in response.tokens:
+        word = {}
+        # Get the text content of this token. Usually a word or punctuation.
+        text = token.text
+
+        # Get the part of speech information for this token.
+        # Parts of spech are as defined in:
+        # http://www.lrec-conf.org/proceedings/lrec2012/pdf/274_Paper.pdf
+        part_of_speech = token.part_of_speech
+        # Get the tag, e.g. NOUN, ADJ for Adjective, et al.
+
+        # Get the dependency tree parse information for this token.
+        # For more information on dependency labels:
+        # http://www.aclweb.org/anthology/P13-2017
+        dependency_edge = token.dependency_edge
+
+        word["word"]=text.content
+        word["begin_offset"]=text.begin_offset
+        word["part_of_speech"]=language.PartOfSpeech.Tag(part_of_speech.tag).name
+
+        # Get the voice, e.g. ACTIVE or PASSIVE
+        word["Voice"]=language.PartOfSpeech.Voice(part_of_speech.voice).name
+        word["Tense"]=language.PartOfSpeech.Tense(part_of_speech.tense).name
+
+        # See API reference for additional Part of Speech information available
+        # Get the lemma of the token. Wikipedia lemma description
+        # https://en.wikipedia.org/wiki/Lemma_(morphology)
+        word["Lemma"]=token.lemma
+        word["index"]=dependency_edge.head_token_index
+        word["Label"]=language.DependencyEdge.Label(dependency_edge.label).name
+
+        if debug:
+            print(u"Token text: {}".format(text.content))
+            print(
+                u"Location of this token in overall document: {}".format(text.begin_offset)
+            )
+            print(
+                u"Part of Speech tag: {}".format(
+                    language.PartOfSpeech.Tag(part_of_speech.tag).name
+                )
+            )
+
+            print(u"Voice: {}".format(language.PartOfSpeech.Voice(part_of_speech.voice).name))
+            # Get the tense, e.g. PAST, FUTURE, PRESENT, et al.
+            print(u"Tense: {}".format(language.PartOfSpeech.Tense(part_of_speech.tense).name))
+
+            print(u"Lemma: {}".format(token.lemma))
+
+            print(u"Head token index: {}".format(dependency_edge.head_token_index))
+            print(
+                u"Label: {}".format(language.DependencyEdge.Label(dependency_edge.label).name)
+            )
+
+        output.append(word)
+
+
+    # Get the language of the text, which will be the same as
+    # the language specified in the request or, if not specified,
+    # the automatically-detected language.
+    if debug:
+        print(u"Language of the text: {}".format(response.language))
+    return str(output)
 
 if __name__ == "__main__":
     # This is used when running locally. Gunicorn is used to run the
